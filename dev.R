@@ -10,8 +10,15 @@ all_games = GET('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&season
 ## reminder I can get start and end date with my existing function 
 ## https://github.com/nhatley/MLB/blob/master/code/functions/get_mlb_league_game_dates.R
 
-all_games_by_date = all_games[["dates"]] %>% 
+team_crosswalk = read_rds("data/team_crosswalk.rds") %>% 
+  rename(name_snake = fg_url_name,
+         name = full_name)
+  
+
+all_games_by_date = all_games[["dates"]][1] %>% 
   map(function(by_date_list){
+    date_set = by_date_list[["date"]]
+    date_set_number_of_games = by_date_list[["totalItems"]]
     map(by_date_list[["games"]], ~{ 
       
       non_lst_items = .x %>% 
@@ -27,33 +34,68 @@ all_games_by_date = all_games[["dates"]] %>%
       non_lst_item_df = non_lst_items %>%
         select(-column_class) %>% 
         spread(column_name, column_value) %>% 
-        ## temporary
         mutate(across(everything(), ~as.character(.x)))
-      
-      # %>% 
-      #   mutate(across(everything()), function(col){
-      #     out_class = non_lst_column_classes %>% 
-      #       filter(column_name == col) %>% 
-      #       pull(column_class)
-      #   }
                  
       lst_items = .x %>% 
         keep(~class(.x) == "list")
       
       team_info = lst_items[["teams"]] %>% 
-        imap(~.x %>% 
-               enframe %>% 
-               mutate(home_away = .y)
-               )
-      # %>% 
-      #   enframe
+        imap(~{
+          .x[["team"]] %>% 
+            enframe %>% 
+            spread(name, value) %>% 
+            select(-link) %>% 
+            mutate(across(everything(), as.character)) %>% 
+            mutate(home_away = .y)
+        }
+          ) %>% 
+        bind_rows() %>% 
+        pivot_wider(names_from = home_away,
+                    values_from = c(id,name)) %>% 
+        set_names(~paste0("team_", .x))
       
-    })
+      venue_info = lst_items[["venue"]] %>% 
+        enframe %>% 
+        spread(name, value) %>% 
+        select(-link) %>% 
+        mutate(across(everything(), as.character)) %>% 
+        set_names(~paste0("venue_", .x)) 
+      
+      out = non_lst_item_df %>% 
+        mutate(gameDate = as.Date(gameDate)) %>% 
+        bind_cols(team_info) %>% 
+        bind_cols(venue_info) %>% 
+        select(one_of(
+          "gamePk", "gameDate", #"gamedayType" idk what this is
+          "gameNumber", "gamesInSeries" 
+        ),
+        starts_with("team_"),
+        one_of(
+          "season", "seasonDisplay", 
+          "seriesDescription", "seriesGameNumber"
+          ),
+        starts_with("venue_")
+        )
+      return(out)  
+    }) %>% 
+      bind_rows %>% 
+      mutate(
+        date_set = date_set,
+        date_set_number_of_games = date_set_number_of_games
+      )
     
-  })
     
+    
+  }) %>% 
+  bind_rows %>% 
+  left_join(team_crosswalk %>% 
+              set_names(~paste0("team_", .x, "_away"))
+            ) %>% 
+  left_join(team_crosswalk %>% 
+              set_names(~paste0("team_", .x, "_home"))
+  )
 
-test_date_list = all_games_by_date[[1]]
+
 
 
 
