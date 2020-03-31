@@ -1,14 +1,16 @@
 library(shiny)
-library(tidyverse)
+library(dplyr)
 
 ## example: https://shiny.rstudio.com/gallery/selectize-vs-select.html
 ## (am v bad at shiny)
 
 ## overview of shiny::reactive()
 ## https://shiny.rstudio.com/articles/reactivity-overview.html
+## reactive shiny example
+## https://shiny.rstudio.com/gallery/reactivity.html
 
-all_seasons = read_rds(here::here("data/games_processed.rds"))
-team_crosswalk = read_rds(here::here("data/team_crosswalk.rds"))
+all_seasons = readRDS("data/games_processed.rds")
+team_crosswalk = readRDS("data/team_crosswalk.rds")
 
 ui <- fluidPage(
     br(),
@@ -26,7 +28,10 @@ ui <- fluidPage(
     fluidRow(
         column(4,
                hr(),
-               selectInput('in_season', 'MLB Season', c("2019", "2018"), selectize=FALSE)
+               selectInput('in_season', 
+                           'MLB Season',
+                           c("2019", "2018"), 
+                           selectize=FALSE)
         ),
         column(4,
                hr(),
