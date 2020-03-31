@@ -11,7 +11,7 @@ So, I wanted to build something that can take a few inputs (e.g. year, team, vs 
 The obv biggest thing here will be to figure out the hashes and ways that mlbtv builds its links
 
 I discovered that all you need to get to a game is just the following:
-https://www.mlb.com/tv/g{game_id}
+
 
 
 For example, for Braves/Mets 06/19/19 game:

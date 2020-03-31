@@ -35,6 +35,18 @@ games_processed = process_game_list(season_game_list) %>%
 
 games_processed %>% write_rds(paste0("data/games_processed_", season, ".rds"))
 
-})
+}) %>% 
+  bind_rows
+# %>% 
+#   write_rds("data/games_processed.rds")
+
+## stack datasets together 
+# fs::dir_info("data/") %>% 
+#   filter(type == "file") %>% 
+#   filter(str_detect(path, "data/games_processed_")) %>% 
+#   pull(path) %>% 
+#   map(~read_rds(.x)) %>% 
+#   bind_rows %>% 
+#   write_rds("data/games_processed.rds")
                               
 

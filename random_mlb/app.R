@@ -1,49 +1,95 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
+library(tidyverse)
 
-# Define UI for application that draws a histogram
+## example: https://shiny.rstudio.com/gallery/selectize-vs-select.html
+## (am v bad at shiny)
+
+team_crosswalk = read_rds(here::here("data/team_crosswalk.rds"))
+
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
+    br(),
+    fluidRow(
+        column(4,
+               h4("MLB Season")
         ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
+        column(4,
+               h4("Team")
+        ),
+        column(4,
+               h4("Home or Away")
+        )
+    ),
+    fluidRow(
+        column(4,
+               hr(),
+               selectInput('in_season', 'MLB Season', c("2019", "2018"), selectize=FALSE)
+        ),
+        column(4,
+               hr(),
+               selectInput('in_team', 'Team', team_crosswalk[["full_name"]], selectize=FALSE)
+        ),
+        column(4,
+               hr(),
+               selectInput('in_home_away', 'Home or Away', 
+                           c(Choose = '', "Home", "Away"), selectize=TRUE)
         )
     )
 )
 
-# Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
+    all_seasons = read_rds(here::here("data/games_processed.rds"))
+    reactive(
+    season_df = all_seasons %>%
+        filter(season == input$in_season)
+    )
+    reactive(
+    season_df_by_team = season_df %>%
+        filter(team_name_away == input$in_team | team_name_home == input$in_team)
+    )
+    if (input$in_home_away == "Home"){
+        reactive(
+        season_df_by_team = season_df_by_team %>% 
+            filter(team_name_home == input$in_team)
+        )
+    }
+    if (input$in_home_away == "Away"){
+        reactive(
+        season_df_by_team = season_df_by_team %>% 
+            filter(team_name_away == input$in_team)
+        )
+    }
 
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
+    ## need to figure something out on gamePk
+    game_link_gamepk = season_df_by_team %>% 
+        sample_n(gamePk, 1) %>% 
+        pull(gamePk)
+    game_id = 1
+    output$link <- textOutput({
+        glue::glue('https://www.mlb.com/tv/g{game_id}')
     })
-}
+    
+    
+    
+    }
 
-# Run the application 
 shinyApp(ui = ui, server = server)
+
+
+#     ,
+#     fluidRow(
+#         column(4,
+#                h4("Vs. Options"),
+#                p("You Do NOT HAVE to choose any of these, but they are here if you want"),
+#                selectInput('in_division', 'Options', c(Choose='', state.name), selectize=FALSE)
+#         ),
+#         column(4,
+#                hr(),
+#                verbatimTextOutput('out2'),
+#                selectInput('in2', 'Options', state.name, selectize=FALSE)
+#         ),
+#         column(4,
+#                hr(),
+#                verbatimTextOutput('out3'),
+#                selectInput('in3', 'Options', state.name, multiple=TRUE, selectize=FALSE)
+#         )
+# )
