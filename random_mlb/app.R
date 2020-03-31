@@ -4,6 +4,10 @@ library(tidyverse)
 ## example: https://shiny.rstudio.com/gallery/selectize-vs-select.html
 ## (am v bad at shiny)
 
+## overview of shiny::reactive()
+## https://shiny.rstudio.com/articles/reactivity-overview.html
+
+all_seasons = read_rds(here::here("data/games_processed.rds"))
 team_crosswalk = read_rds(here::here("data/team_crosswalk.rds"))
 
 ui <- fluidPage(
@@ -31,32 +35,33 @@ ui <- fluidPage(
         column(4,
                hr(),
                selectInput('in_home_away', 'Home or Away', 
-                           c(Choose = '', "Home", "Away"), selectize=TRUE)
+                           c(Choose = '', "Home", "Away"), selectize=FALSE)
         )
     )
 )
 
 server <- function(input, output, session) {
-    all_seasons = read_rds(here::here("data/games_processed.rds"))
-    reactive(
-    season_df = all_seasons %>%
+    season_df <- reactive({ 
+        all_seasons %>%
         filter(season == input$in_season)
-    )
-    reactive(
-    season_df_by_team = season_df %>%
+    })
+    
+    season_df_by_team <- reactive({ 
+        season_df %>%
         filter(team_name_away == input$in_team | team_name_home == input$in_team)
-    )
-    if (input$in_home_away == "Home"){
-        reactive(
-        season_df_by_team = season_df_by_team %>% 
+    })
+    home_away = reactive({
+        if(input$in_home_away == "Home") home_away <- "Home" 
+        if(input$in_home_away == "Away") home_away <- "Away" 
+    })
+    if (home_away == "Home"){
+        season_df_by_team <- season_df_by_team %>% 
             filter(team_name_home == input$in_team)
-        )
     }
-    if (input$in_home_away == "Away"){
-        reactive(
-        season_df_by_team = season_df_by_team %>% 
+    if (home_away == "Away"){
+        season_df_by_team <- season_df_by_team %>% 
             filter(team_name_away == input$in_team)
-        )
+        
     }
 
     ## need to figure something out on gamePk
@@ -67,7 +72,7 @@ server <- function(input, output, session) {
     output$link <- textOutput({
         glue::glue('https://www.mlb.com/tv/g{game_id}')
     })
-    
+   
     
     
     }
