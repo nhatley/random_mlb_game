@@ -180,3 +180,77 @@ statcast_url <- 'https://baseballsavant.mlb.com/gamefeed?game_pk=567131&game_dat
 statcast_tables <- statcast_url %>% 
   read_html() %>% 
   html_table()
+
+input = list()
+input$link = 1
+input$in_season = 2019
+input$in_team = 'braves'
+input$in_home_away = ''
+
+
+datasetArgs <- reactive({
+    switch(input$link,
+    list(
+      arg_season = input$in_season,
+      arg_team = input$in_team,
+      arg_home_away = input$in_home_away
+         )
+    )
+  })
+
+x = list(
+  season = input$in_season,
+  team = input$in_team,
+  home_away = input$in_home_away
+) 
+
+
+make_link <- function(x){# x = datasetArgs
+  season_df <- if(x[["season"]] == 2019) {
+    readRDS(
+      url(
+        "https://github.com/nhatley/random_mlb_game/raw/master/data/games_processed_2019.rds"
+      )
+    )
+  } else if(x[["season"]] == 2018) {
+    readRDS(
+      url(
+        "https://github.com/nhatley/random_mlb_game/raw/master/data/games_processed_2018.rds"
+      )
+    )
+  } else{
+    readRDS(
+      url(
+        "https://github.com/nhatley/random_mlb_game/raw/master/data/games_processed.rds"      
+        )
+    )
+  }
+  
+  team_df <-  if(no_selection(x[["team"]])) {
+    season_df 
+  } else{
+      if(x[["home_away"]] == "Home"){
+        season_df %>% 
+          filter(team_name_home == x[["team"]])      
+      } else if(x[["home_away"]] == "Away"){
+        season_df %>% 
+          filter(team_name_away == x[["team"]])
+      } else{
+        season_df %>% 
+          filter(team_name_away == x[["team"]] | team_name_home == x[["team"]])          
+      }
+    
+    }
+  
+  game <- sample(team_df[["gamePk"]], size = 1)
+  
+  link <- paste0('https://www.mlb.com/tv/g', 
+                 game
+                 )
+
+  return(link)
+}
+
+
+
+datasetArgs <- purrr::modify()
