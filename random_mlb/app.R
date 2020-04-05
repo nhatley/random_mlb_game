@@ -82,13 +82,11 @@ ui <- fluidPage(
                            selectize=FALSE)
         )
     ),
-    fluidRow(
-        column(4,
-        checkboxInput("in_game_details", label = "Show Game Details?", value = FALSE),
-    )
-    ),
-    actionButton("link", label = "Find a game"),
-    
+    checkboxInput("in_game_details", "Show Game Details?", value = FALSE),
+    hr(),
+    actionButton("link", label = "Find a game", width = "40%"),
+    hr(),
+    fluidRow(column(12, verbatimTextOutput("game_details"))),
     hr(),
     fluidRow(column(12, verbatimTextOutput("link")))
 )
@@ -97,7 +95,7 @@ no_selection <- function(x) stringr::str_length(x) == 0
 
 server <- function(input, output, session) {
     
-    datasetArgs <- reactive({
+    datasetArgs <- eventReactive(input$link, {
             list(
                 choice = input$link,
                 season = input$in_season,
@@ -105,16 +103,12 @@ server <- function(input, output, session) {
                 home_away = input$in_home_away,
                 vs_team = input$vs_team,
                 vs_division = input$vs_division,
-                vs_leauge = input$vs_league,
-                show_game_details = input$in_game_details
+                vs_leauge = input$vs_league
         )
-        
     })
+
     make_link <- function(x){# x = datasetArgs
-        if(x[["choice"]] == 0){
-            link <- cat("\n", '{ Click Find a Game } ')
-        } else{   
-        
+
         season_df <- if(x[["season"]] == 2019) {
             readRDS(
                 url(
@@ -151,55 +145,79 @@ server <- function(input, output, session) {
             
         }
         
+        skip_vs <- all(no_selection(x[["vs_team"]]), 
+                       no_selection(x[["vs_division"]]),
+                       no_selection(x[["vs_leauge"]])
+                       )
+        
+        if (!skip_vs){
+        
+        team_df <- if(!(no_selection(x[["vs_team"]]))) {
+            vs_division <- ""
+            vs_leauge <- ""
+            
+            team_df <- team_df %>% 
+                filter(team_name_away == x[["vs_team"]] | team_name_home == x[["vs_team"]])          
+        } else if(!(no_selection(x[["vs_division"]]))){
+            vs_leauge <- ""
+            team_df <- team_df %>% 
+                    filter(team_division_away == x[["vs_division"]] | team_division_home == x[["vs_division"]])          
+            } else{
+            team_df <-team_df %>% 
+                    filter(team_league_away == x[["vs_league"]] | team_league_home == x[["vs_league"]])
+            }
+        
+        }
+        
         game <- sample(team_df[["gamePk"]], size = 1)
         
-        
-        
-        link <- if(x[["show_game_details"]] == "No"){
-        paste0('https://www.mlb.com/tv/g', 
-                       game)
-        } else{
-        link_df = team_df %>% filter(gamePk == game)
-            
-        cat(
-            "\n",    
-            paste0(link_df$gameDate, " :: ",  link_df$team_abbreviation_home, " vs ",  link_df$team_abbreviation_away),
-            "\n",    
-            "MLBTV Link: ",    
-        paste0('https://www.mlb.com/tv/g', 
-                   game),
-        "\n"
-        
-        )
-        }
-    }
-        
-        return(link)
-    }
 
-    
-        output$link <- renderPrint({ make_link(datasetArgs()) })
+        link_df = team_df %>% filter(gamePk == game)
         
+        link <- paste0("MLBTV Link: ", 
+               'https://www.mlb.com/tv/g', 
+                   game)
+        
+        detail_list <-
+            list(
+                date = link_df[["gameDate"]],
+                team_home = unique(link_df[["team_abbreviation_home"]]),
+                team_away = unique(link_df[["team_abbreviation_away"]])
+            )
+
+        out = list(
+            detail_list = detail_list,
+            game_link = link
+        )
+        
+        return(out)
+    }
+    
+    #compiled <- reactive({})
+    output$link <- renderPrint({ make_link(datasetArgs())[["game_link"]] })
+    output$game_details <- renderText({
+        # Take a dependency on input$goButton. This will run once initially,
+        # because the value changes from NULL to 0.
+        if(input$in_game_details){
+        paste0(make_link(datasetArgs())[["detail_list"]][["date"]], "\n",
+                make_link(datasetArgs())[["detail_list"]][["team_home"]], " vs ",
+                make_link(datasetArgs())[["detail_list"]][["team_away"]]
+                )
+        
+        }
+        
+    })
+        # output$link <- renderPrint({ make_link(datasetArgs())[["game_link"]] })
+        # output$game_details <- renderPrint({make_link(datasetArgs())[["detail_list"]] })
+            
+            
+            
+            
+        
+    
+            
+
+
 }
 
 shinyApp(ui = ui, server = server)
-
-
-#     ,
-#     fluidRow(
-#         column(4,
-#                h4("Vs. Options"),
-#                p("You Do NOT HAVE to choose any of these, but they are here if you want"),
-#                selectInput('in_division', 'Options', c(Choose='', state.name), selectize=FALSE)
-#         ),
-#         column(4,
-#                hr(),
-#                verbatimTextOutput('out2'),
-#                selectInput('in2', 'Options', state.name, selectize=FALSE)
-#         ),
-#         column(4,
-#                hr(),
-#                verbatimTextOutput('out3'),
-#                selectInput('in3', 'Options', state.name, multiple=TRUE, selectize=FALSE)
-#         )
-# )
