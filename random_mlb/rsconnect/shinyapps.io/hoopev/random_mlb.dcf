@@ -1,0 +1,12 @@
+name: random_mlb
+title: random_mlb
+username:
+account: hoopev
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2059455
+bundleId: 2970506
+url: https://hoopev.shinyapps.io/random_mlb/
+when: 1586063074.67761
+asMultiple: FALSE
+asStatic: FALSE
