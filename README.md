@@ -18,3 +18,5 @@ For example, for Braves/Mets 06/19/19 game:
 https://www.mlb.com/tv/g567207
 
 So, now I just need to collect these game_ids (e.g. g567207) and attach them to games.
+
+9a802de

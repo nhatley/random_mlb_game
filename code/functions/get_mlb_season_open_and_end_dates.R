@@ -32,18 +32,35 @@ get_mlb_season_open_and_end_dates <- function(season = '2019',
   
   season_game_info_url = GET(url_ping) %>% content()
   
-  season_game_info = map_df(season_game_info_url[["org_game_type_date_info"]][["queryResults"]][["row"]],
-                            ~enframe(.x) %>% 
+  season_game_info = map_df(
+    season_game_info_url[["org_game_type_date_info"]][["queryResults"]][["row"]], ~{
+                            if (!is.null(.x)) {
+                            enframe(.x) %>% 
                               mutate(value = as.character(value)) %>%
                               spread(name, value)
-  )  %>% 
+                            }
+  })
+  
+  season_game_info <- 
+  
+  if("league_code" %in% names(season_game_info)){
+  
+  season_game_info %>% 
     filter(league_code != "") %>% 
     select(-one_of(
       "playoff_round", "playoffs_sw", "round_robin_sw", "sport_code"
     )
     ) %>% 
-    mutate_at(vars(ends_with("_date")), ~lubridate::as_date(.x))
-  
+      mutate_at(vars(ends_with("_date")), ~lubridate::as_date(.x))
+  } else{
+    tibble(
+      first_game_date = NA,
+      game_type = game_type,
+      last_game_date = NA,
+      season = season
+    )
+                            
+  }
   
   return(season_game_info)
 }
